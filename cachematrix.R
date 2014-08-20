@@ -10,7 +10,11 @@
 ## This function creates a special "matrix" object that can cache its inverse. 
 ##
 makeCacheMatrix <- function(x = matrix()) {
+    # Note: 'inv' is a free variable
     inv <- NULL
+
+    # Create a set of functions that will be responsible for caching and
+    # retrieval of the matrix and of its inverse.
     set <- function(y) {
         x <<- y
         inv <<- NULL
@@ -18,6 +22,9 @@ makeCacheMatrix <- function(x = matrix()) {
     get <- function() x
     setinverse <- function(inverse) inv <<- inverse
     getinverse <- function() inv
+
+    # Note: the matrix can be accessed by calling foo$get(), and its inverse
+    # (in its current cache state) can be obtained by calling foo$getinverse().
     list(set = set, get = get,
          setinverse = setinverse,
          getinverse = getinverse)
@@ -40,13 +47,28 @@ makeCacheMatrix.test <- function() {
 ## the cache.
 ##
 cacheSolve <- function(x, ...) {
+    #
+    # First, see if the inverse has already been cached...
+    #
     inv <- x$getinverse()
     if(!is.null(inv)) {
+        #
+        # ...and, if so, simply return the cached data:
+        #
         message("getting cached data")
         return(inv)
     }
+    
+    #
+    # If there is no cached value, call 'solve', forwarding all the extra
+    # parameters passed to this function.
+    #
     data <- x$get()
     inv <- solve(data, ...)
+
+    #
+    # Finally, cache the inverse for later re-use.
+    #
     x$setinverse(inv)
     inv
 }
@@ -62,5 +84,19 @@ cacheSolve.test <- function() {
     message("Inverse after cacheSolve()")
     print(M$getinverse())
     message("This should be identity")
-    inv %*% M$get()
+    print(inv %*% M$get())
+    message("Calling cacheSolve() again")
+    inv <- cacheSolve(M)
+    print(inv)
+    message("Making a different cache matrix")
+    M2 <- makeCacheMatrix(inv)
+    message("Let's see how its inverse looks like (should be NULL)")
+    print(M2$getinverse())
+    message("Now let's see what happens when we invert it")
+    inv2 <- cacheSolve(M2)
+    message("Print out both inverses")
+    print(M$getinverse())
+    print(M2$getinverse())
+    message("This should be identity again")
+    inv %*% inv2
 }
